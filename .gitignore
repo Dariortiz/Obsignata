@@ -1,2 +1,47 @@
-# Windows Zone Identifier files
-*:ZoneIdentifier
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Build outputs
+dist/
+build/
+
+# Hardhat
+hardhat/artifacts/
+hardhat/cache/
+hardhat/typechain-types/
+
+# Frontend build
+frontend/dist/
+
+# Backend build
+backend/dist/
+
+# Windows
+*.Zone.Identifier
+Thumbs.db
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.local
+
+# Slither
+.slither/
+slither.db.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Checklist
+Checklist.md

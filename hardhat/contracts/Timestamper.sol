@@ -18,8 +18,8 @@ contract Timestamper {
     /// @dev timestamp and version are packed into a single 32-byte storage slot.
     struct Batch {
         bytes32 merkleRoot; // Slot 0
-        uint64 timestamp; // Slot 1 (8 bytes)
-        uint16 version; // Slot 1 (2 bytes, packed)
+        uint64 timestamp;   // Slot 1 (8 bytes)
+        uint16 version;     // Slot 1 (2 bytes, packed)
     }
 
     // -------------------------------------------------------------------------
@@ -163,6 +163,10 @@ contract Timestamper {
         Batch storage batch = batches[_batchId];
 
         uint64 ts = batch.timestamp;
+        // slither-disable-next-line incorrect-equality,timestamp
+        // Safe: timestamp == 0 is used solely as an existence check, not for
+        // financial logic. Minor miner manipulation (~15s) cannot produce a
+        // zero timestamp for a real block, making this a reliable sentinel.
         if (ts == 0) revert BatchNotFound();
 
         timestamp = uint256(ts);
@@ -172,8 +176,14 @@ contract Timestamper {
     /// @notice Returns the full details of a committed batch.
     /// @param _batchId The ID of the batch to look up.
     /// @return The Batch struct containing root, timestamp, and version.
-    function getBatch(uint256 _batchId) external view returns (Batch memory) {
+    function getBatch(uint256 _batchId)
+        external
+        view
+        returns (Batch memory)
+    {
         Batch memory batch = batches[_batchId];
+        // slither-disable-next-line incorrect-equality,timestamp
+        // Safe: same reasoning as verify() — existence check only, not financial logic.
         if (batch.timestamp == 0) revert BatchNotFound();
         return batch;
     }
