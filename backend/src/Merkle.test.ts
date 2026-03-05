@@ -268,7 +268,13 @@ describe("hashFile", () => {
 describe("Cross-consistency", () => {
     test("proof generated for one tree does not verify against a different tree", () => {
         const tree1 = buildTree(makeLeaves(4));
-        const tree2 = buildTree(makeLeaves(4).reverse());
+        // Use a completely different set of leaves to guarantee a different root
+        const tree2 = buildTree([
+            makeLeaf("x"),
+            makeLeaf("y"),
+            makeLeaf("z"),
+            makeLeaf("w"),
+        ]);
         const { leaf, proof } = getProof(tree1, 0);
         expect(verifyProof(leaf, proof, tree2.root)).toBe(false);
     });
