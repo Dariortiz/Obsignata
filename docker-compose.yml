@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   hardhat:
     build:
@@ -49,6 +51,25 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
+  workspace:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: workspace
+    command: sleep infinity
+    networks:
+      - app-network
+    volumes:
+      - .:/workspace
+      - workspace-hardhat-modules:/workspace/hardhat/node_modules
+      - workspace-backend-modules:/workspace/backend/node_modules
+      - workspace-frontend-modules:/workspace/frontend/node_modules
+
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  workspace-hardhat-modules:
+  workspace-backend-modules:
+  workspace-frontend-modules:

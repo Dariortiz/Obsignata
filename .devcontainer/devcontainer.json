@@ -1,0 +1,25 @@
+{
+  "name": "Obsignata Workspace",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "NomicFoundation.hardhat-solidity",
+        // "JuanBlanco.solidity",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "[typescript]": {
+          "tsdk.path": "/workspace/backend/node_modules/typescript/lib"
+        },
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  "remoteUser": "node"
+}

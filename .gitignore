@@ -45,3 +45,14 @@ __pycache__/
 
 # Checklist
 Checklist.md
+
+# Certificates generated locally
+*.pdf
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Coverage reports
+coverage/
+hardhat/coverage/
+hardhat/coverage.json

@@ -1,0 +1,17 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache curl git python3 py3-pip
+
+WORKDIR /workspace
+
+# Install dependencies for all three packages
+COPY hardhat/package.json ./hardhat/
+COPY backend/package.json ./backend/
+COPY frontend/package.json ./frontend/
+
+RUN cd hardhat && npm install
+RUN cd backend && npm install
+RUN cd frontend && npm install
+
+# Keep container alive — VS Code attaches to it
+CMD ["sleep", "infinity"]
