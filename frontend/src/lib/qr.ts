@@ -34,12 +34,14 @@ export async function extractPayloadFromPDF(file: File): Promise<CertificatePayl
     });
 
     if (code) {
-      let payload: CertificatePayload;
+      let rawPayload: unknown;
       try {
-        payload = JSON.parse(code.data);
+        rawPayload = JSON.parse(code.data);
       } catch {
         throw new Error("QR code found but payload is not valid JSON.");
       }
+
+      const p = rawPayload as Record<string, unknown>;
 
       const required = [
         "fileHash", "merkleRoot", "proof", "batchId",
@@ -49,15 +51,15 @@ export async function extractPayloadFromPDF(file: File): Promise<CertificatePayl
       ];
 
       // Default hashingMode for old certificates
-      if (!(payload as Record<string, unknown>)['hashingMode']) payload.hashingMode = "raw";
+      if (!p['hashingMode']) p['hashingMode'] = "raw";
 
       for (const field of required) {
-        if ((payload as unknown as Record<string, unknown>)[field] === undefined) {
+        if (p[field] === undefined) {
           throw new Error(`Certificate payload is missing field: "${field}".`);
         }
       }
 
-      return payload;
+      return p as unknown as CertificatePayload;
     }
   }
 
