@@ -9,6 +9,7 @@ import { Submission } from "./queue";
 export interface CertificatePayload {
   version: number;
   fileHash: string;
+  hashingMode: "raw" | "content";
   merkleRoot: string;
   proof: string[];
   batchId: number;
@@ -63,6 +64,7 @@ export async function generateCertificate(submission: Submission): Promise<Buffe
   const payload: CertificatePayload = {
     version: 1,
     fileHash: submission.fileHash,
+    hashingMode: submission.hashingMode,
     merkleRoot: submission.merkleRoot!,
     proof: submission.proof!,
     batchId: submission.batchId!,
@@ -188,7 +190,10 @@ function buildPDF(
     row("Timestamp (UTC)", ts.toUTCString());
     row("Merkle Root", payload.merkleRoot, true);
     row("Contract Address", payload.contractAddress, true);
-    row("Chain", IS_LOCAL ? "Hardhat Local (31337)" : "Polygon Mainnet (137)");
+    row("Chain", IS_LOCAL ? "Hardhat Local (31337)" : "Polygon Amoy Testnet (80002)");
+    row("Hashing Mode", payload.hashingMode === "content"
+      ? "Content (PDF text extracted — metadata excluded)"
+      : "Raw (full file bytes — metadata included)");
 
     y += 6;
 
@@ -260,7 +265,7 @@ export function parsePayload(json: string): CertificatePayload {
 
   const p = parsed as Record<string, unknown>;
   const required = [
-    "version", "fileHash", "merkleRoot", "proof",
+    "version", "fileHash", "hashingMode", "merkleRoot", "proof",
     "batchId", "transactionHash", "blockNumber",
     "blockTimestamp", "contractAddress", "chainId", "issuedAt",
   ];

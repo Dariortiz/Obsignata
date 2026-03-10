@@ -15,6 +15,13 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://0.0.0.0:8545",
     },
+    amoy: {
+      url: process.env.POLYGON_AMOY_RPC_URL || "",
+      accounts: process.env.DEPLOYER_PRIVATE_KEY
+        ? [process.env.DEPLOYER_PRIVATE_KEY]
+        : [],
+      chainId: 80002,
+    },
     mumbai: {
       url: process.env.POLYGON_MUMBAI_RPC_URL || "",
       accounts: process.env.DEPLOYER_PRIVATE_KEY

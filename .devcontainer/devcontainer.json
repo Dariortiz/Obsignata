@@ -9,7 +9,6 @@
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "NomicFoundation.hardhat-solidity",
-        // "JuanBlanco.solidity",
         "ms-vscode.vscode-typescript-next"
       ],
       "settings": {

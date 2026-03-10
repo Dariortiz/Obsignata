@@ -23,8 +23,6 @@ services:
       - "3001:3001"
     env_file:
       - .env
-    environment:
-      - RPC_URL=http://hardhat:8545
     depends_on:
       hardhat:
         condition: service_healthy
@@ -33,6 +31,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - backend-data:/app/data
 
   frontend:
     build:
@@ -42,7 +41,7 @@ services:
       - "3000:3000"
     environment:
       - VITE_BACKEND_URL=http://localhost:3001
-      - VITE_RPC_URL=http://localhost:8545
+      - VITE_RPC_URL=https://polygon-amoy.g.alchemy.com/v2/BoGnIXXbmFc8Qj4Ge1NlB
     depends_on:
       - backend
     networks:
@@ -73,3 +72,4 @@ volumes:
   workspace-hardhat-modules:
   workspace-backend-modules:
   workspace-frontend-modules:
+  backend-data:

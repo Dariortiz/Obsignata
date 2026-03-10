@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ethers } from "ethers";
-import { hashFile, formatFileSize } from "../lib/hash";
+import { hashFile, hashFilePdfContent, formatFileSize } from "../lib/hash";
 import { computeRoot } from "../lib/merkle";
 import { extractPayloadFromPDF } from "../lib/qr";
 import { CertificatePayload } from "../lib/types";
@@ -28,21 +28,26 @@ export function VerifyView() {
   const handleVerify = async () => {
     if (!originalFile || !certFile) return;
 
-    setState({ phase: "loading", message: "Hashing your file…" });
+    setState({ phase: "loading", message: "Reading certificate QR code…" });
 
     try {
-      // Step 1: Hash the original file
-      const fileHash = await hashFile(originalFile);
-
-      // Step 2: Extract proof payload from certificate PDF
-      setState({ phase: "loading", message: "Reading certificate QR code…" });
+      // Step 1: Extract proof payload from certificate PDF first
+      // so we know which hashing mode was used
       const payload = await extractPayloadFromPDF(certFile);
+
+      // Step 2: Hash the original file using the same mode as when it was stamped
+      setState({ phase: "loading", message: "Hashing your file…" });
+      const fileHash =
+        payload.hashingMode === "content"
+          ? await hashFilePdfContent(originalFile)
+          : await hashFile(originalFile);
 
       // Step 3: Check file hash matches certificate
       if (fileHash.toLowerCase() !== payload.fileHash.toLowerCase()) {
         setState({
           phase: "invalid",
-          reason: "File hash does not match the certificate. This file was not timestamped by this certificate.",
+          reason:
+            "File hash does not match the certificate. This file was not timestamped by this certificate.",
         });
         return;
       }
@@ -54,7 +59,8 @@ export function VerifyView() {
       if (recomputedRoot.toLowerCase() !== payload.merkleRoot.toLowerCase()) {
         setState({
           phase: "invalid",
-          reason: "Merkle proof is invalid. The certificate data may have been tampered with.",
+          reason:
+            "Merkle proof is invalid. The certificate data may have been tampered with.",
         });
         return;
       }
@@ -65,19 +71,20 @@ export function VerifyView() {
       const contract = new ethers.Contract(
         payload.contractAddress,
         TIMESTAMPER_ABI,
-        provider
+        provider,
       );
 
       const [valid, timestamp]: [boolean, bigint] = await contract.verify(
         fileHash,
         payload.proof,
-        payload.batchId
+        payload.batchId,
       );
 
       if (!valid) {
         setState({
           phase: "invalid",
-          reason: "The Merkle proof does not verify against the on-chain root. The certificate may be fraudulent.",
+          reason:
+            "The Merkle proof does not verify against the on-chain root. The certificate may be fraudulent.",
         });
         return;
       }
@@ -122,9 +129,15 @@ export function VerifyView() {
         />
       </div>
 
-      {(state.phase === "error") && (
+      {state.phase === "error" && (
         <div className="status-box failed" style={{ marginTop: 16 }}>
-          <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--error)" }}>
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.8rem",
+              color: "var(--error)",
+            }}
+          >
             {state.message}
           </p>
         </div>
@@ -137,10 +150,13 @@ export function VerifyView() {
           onClick={handleVerify}
           disabled={!canVerify}
         >
-          {state.phase === "loading"
-            ? <><div className="spinner" /> {state.message}</>
-            : "Verify certificate →"
-          }
+          {state.phase === "loading" ? (
+            <>
+              <div className="spinner" /> {state.message}
+            </>
+          ) : (
+            "Verify certificate →"
+          )}
         </button>
       )}
 
@@ -154,7 +170,11 @@ export function VerifyView() {
       )}
 
       {state.phase === "invalid" && (
-        <VerifyResult valid={false} reason={state.reason} onReset={handleReset} />
+        <VerifyResult
+          valid={false}
+          reason={state.reason}
+          onReset={handleReset}
+        />
       )}
     </div>
   );
@@ -181,8 +201,20 @@ function FileDropzone({
   if (file) {
     return (
       <div className="file-info">
-        <svg className="file-info-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        <svg
+          className="file-info-icon"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+          />
         </svg>
         <span className="file-info-name">{file.name}</span>
         <span className="file-info-size">{formatFileSize(file.size)}</span>
@@ -212,7 +244,10 @@ function FileDropzone({
   return (
     <label
       className={`dropzone${dragging ? " dragging" : ""}`}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -227,10 +262,22 @@ function FileDropzone({
         onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
         disabled={disabled}
       />
-      <svg className="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+      <svg
+        className="dropzone-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+        />
       </svg>
-      <p className="dropzone-text"><strong>Drop here</strong> or click to browse</p>
+      <p className="dropzone-text">
+        <strong>Drop here</strong> or click to browse
+      </p>
       <p className="dropzone-hint">{hint}</p>
     </label>
   );
@@ -246,8 +293,21 @@ function CopyableHash({ label, value }: { label: string; value: string }) {
   return (
     <div className="status-row" style={{ alignItems: "flex-start", gap: 12 }}>
       <span className="status-key">{label}</span>
-      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <span className="status-val" style={{ wordBreak: "break-all", flex: 1 }}>{value}</span>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+        }}
+      >
+        <span
+          className="status-val"
+          style={{ wordBreak: "break-all", flex: 1 }}
+        >
+          {value}
+        </span>
         <button
           onClick={copy}
           title={copied ? "Copied!" : "Copy to clipboard"}
@@ -263,13 +323,34 @@ function CopyableHash({ label, value }: { label: string; value: string }) {
           }}
         >
           {copied ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <polyline
+                points="20 6 9 17 4 12"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeLinecap="round"/>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                strokeLinecap="round"
+              />
             </svg>
           )}
         </button>
@@ -307,7 +388,9 @@ function VerifyResult({
         <div className="verify-details">
           <div className="status-row">
             <span className="status-key">Timestamp</span>
-            <span className="status-val">{new Date(timestamp * 1000).toUTCString()}</span>
+            <span className="status-val">
+              {new Date(timestamp * 1000).toUTCString()}
+            </span>
           </div>
           <div className="status-row">
             <span className="status-key">Batch</span>
@@ -316,10 +399,22 @@ function VerifyResult({
           <CopyableHash label="Tx hash" value={payload.transactionHash} />
           <CopyableHash label="File hash" value={payload.fileHash} />
           <CopyableHash label="Merkle root" value={payload.merkleRoot} />
+          <div className="status-row">
+            <span className="status-key">Hashing mode</span>
+            <span className="status-val">
+              {payload.hashingMode === "content"
+                ? "Content (PDF text only — metadata excluded)"
+                : "Raw (full file bytes)"}
+            </span>
+          </div>
         </div>
       )}
 
-      <button className="btn btn-secondary" style={{ marginTop: 20 }} onClick={onReset}>
+      <button
+        className="btn btn-secondary"
+        style={{ marginTop: 20 }}
+        onClick={onReset}
+      >
         Verify another file
       </button>
     </div>

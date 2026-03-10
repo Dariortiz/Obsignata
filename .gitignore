@@ -56,3 +56,9 @@ Checklist.md
 coverage/
 hardhat/coverage/
 hardhat/coverage.json
+
+# Wallet
+wallet.txt
+
+# SQLite database
+backend/data/

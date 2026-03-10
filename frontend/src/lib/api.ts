@@ -2,11 +2,14 @@ import { SubmissionResponse } from "./types";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
 
-export async function submitHash(fileHash: string): Promise<SubmissionResponse> {
+export async function submitHash(
+  fileHash: string,
+  hashingMode: "raw" | "content" = "raw",
+): Promise<SubmissionResponse> {
   const res = await fetch(`${BASE_URL}/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileHash }),
+    body: JSON.stringify({ fileHash, hashingMode }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

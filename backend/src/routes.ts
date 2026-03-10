@@ -1,28 +1,22 @@
 import { Router, Request, Response } from "express";
-import { SubmissionQueue } from "./queue";
+import { SubmissionQueue, isValidHash, HashingMode } from "./queue";
 import { Batcher } from "./batcher";
-import { isValidHash } from "./queue";
 import { generateCertificate } from "./certificate";
 
-/**
- * Creates and returns the Express router with all API routes.
- * Dependencies are injected for testability.
- */
 export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
   const router = Router();
 
   // ---------------------------------------------------------------------------
   // POST /submit
-  // Submit a file hash for timestamping.
   // ---------------------------------------------------------------------------
 
   router.post("/submit", async (req: Request, res: Response) => {
-    const { fileHash } = req.body;
+    const { fileHash, hashingMode } = req.body;
 
     if (!fileHash) {
-      return res.status(400).json({
-        error: "Missing required field: fileHash",
-      });
+      return res
+        .status(400)
+        .json({ error: "Missing required field: fileHash" });
     }
 
     if (!isValidHash(fileHash)) {
@@ -31,14 +25,17 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
       });
     }
 
+    const mode: HashingMode = hashingMode === "content" ? "content" : "raw";
+
     try {
-      const submission = queue.add(fileHash);
+      const submission = queue.add(fileHash, mode);
       await batcher.onSubmission();
 
       return res.status(201).json({
         submissionId: submission.id,
         status: submission.status,
         submittedAt: submission.submittedAt,
+        hashingMode: submission.hashingMode,
         message:
           "File hash received. Your certificate will be ready after the next batch commit.",
       });
@@ -49,7 +46,6 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
 
   // ---------------------------------------------------------------------------
   // GET /submission/:id
-  // Check the status of a submission.
   // ---------------------------------------------------------------------------
 
   router.get("/submission/:id", (req: Request, res: Response) => {
@@ -63,6 +59,7 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
     const response: Record<string, unknown> = {
       submissionId: submission.id,
       fileHash: submission.fileHash,
+      hashingMode: submission.hashingMode,
       status: submission.status,
       submittedAt: submission.submittedAt,
     };
@@ -81,7 +78,6 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
 
   // ---------------------------------------------------------------------------
   // GET /certificate/:id
-  // Generate and download a PDF certificate for a committed submission.
   // ---------------------------------------------------------------------------
 
   router.get("/certificate/:id", async (req: Request, res: Response) => {
@@ -108,14 +104,12 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
 
     try {
       const pdf = await generateCertificate(submission);
-
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename="obsignata-certificate-${id}.pdf"`,
       );
       res.setHeader("Content-Length", pdf.length);
-
       return res.status(200).send(pdf);
     } catch (error) {
       return res.status(500).json({ error: "Failed to generate certificate" });
@@ -124,7 +118,6 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
 
   // ---------------------------------------------------------------------------
   // GET /health
-  // Health check endpoint.
   // ---------------------------------------------------------------------------
 
   router.get("/health", (_req: Request, res: Response) => {

@@ -1,6 +1,9 @@
+export type HashingMode = "raw" | "content";
+
 export interface CertificatePayload {
   version: number;
   fileHash: string;
+  hashingMode: HashingMode;
   merkleRoot: string;
   proof: string[];
   batchId: number;
