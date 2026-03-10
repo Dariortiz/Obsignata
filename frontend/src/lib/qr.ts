@@ -4,16 +4,14 @@ import { CertificatePayload } from "./types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
-  import.meta.url,
+  import.meta.url
 ).toString();
 
 /**
  * Extracts and parses the Obsignata proof payload from a certificate PDF.
  * Renders the first page at high scale to ensure QR code is readable.
  */
-export async function extractPayloadFromPDF(
-  file: File,
-): Promise<CertificatePayload> {
+export async function extractPayloadFromPDF(file: File): Promise<CertificatePayload> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const page = await pdf.getPage(1);
@@ -44,23 +42,17 @@ export async function extractPayloadFromPDF(
       }
 
       const required = [
-        "fileHash",
-        "merkleRoot",
-        "proof",
-        "batchId",
-        "transactionHash",
-        "blockNumber",
-        "blockTimestamp",
-        "contractAddress",
-        "chainId",
+        "fileHash", "merkleRoot", "proof", "batchId",
+        "transactionHash", "blockNumber", "blockTimestamp",
+        "contractAddress", "chainId",
         // hashingMode added in v5b — not required for backwards compat
       ];
 
       // Default hashingMode for old certificates
-      if (!payload.hashingMode) payload.hashingMode = "raw";
+      if (!(payload as Record<string, unknown>)['hashingMode']) payload.hashingMode = "raw";
 
       for (const field of required) {
-        if ((payload as Record<string, unknown>)[field] === undefined) {
+        if ((payload as unknown as Record<string, unknown>)[field] === undefined) {
           throw new Error(`Certificate payload is missing field: "${field}".`);
         }
       }
@@ -70,6 +62,6 @@ export async function extractPayloadFromPDF(
   }
 
   throw new Error(
-    "No QR code found in certificate. Make sure you uploaded the original Obsignata certificate PDF.",
+    "No QR code found in certificate. Make sure you uploaded the original Obsignata certificate PDF."
   );
 }

@@ -17,8 +17,10 @@ export interface CertificatePayload {
 
 export interface SubmissionResponse {
   submissionId: string;
+  fileHash: string;
   status: "pending" | "committed" | "failed";
   submittedAt: number;
+  hashingMode?: HashingMode;
   message?: string;
   batchId?: number;
   merkleRoot?: string;

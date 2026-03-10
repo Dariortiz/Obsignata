@@ -14,9 +14,7 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
     const { fileHash, hashingMode } = req.body;
 
     if (!fileHash) {
-      return res
-        .status(400)
-        .json({ error: "Missing required field: fileHash" });
+      return res.status(400).json({ error: "Missing required field: fileHash" });
     }
 
     if (!isValidHash(fileHash)) {
@@ -25,7 +23,8 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
       });
     }
 
-    const mode: HashingMode = hashingMode === "content" ? "content" : "raw";
+    const mode: HashingMode =
+      hashingMode === "content" ? "content" : "raw";
 
     try {
       const submission = queue.add(fileHash, mode);
@@ -33,11 +32,11 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
 
       return res.status(201).json({
         submissionId: submission.id,
+        fileHash: submission.fileHash,
         status: submission.status,
         submittedAt: submission.submittedAt,
         hashingMode: submission.hashingMode,
-        message:
-          "File hash received. Your certificate will be ready after the next batch commit.",
+        message: "File hash received. Your certificate will be ready after the next batch commit.",
       });
     } catch (error) {
       return res.status(500).json({ error: "Internal server error" });
@@ -107,7 +106,7 @@ export function createRouter(queue: SubmissionQueue, batcher: Batcher): Router {
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="obsignata-certificate-${id}.pdf"`,
+        `attachment; filename="obsignata-certificate-${id}.pdf"`
       );
       res.setHeader("Content-Length", pdf.length);
       return res.status(200).send(pdf);
