@@ -62,3 +62,6 @@ wallet.txt
 
 # SQLite database
 backend/data/
+
+# Claude
+.claude/settings.local.json

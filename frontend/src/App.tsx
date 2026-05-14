@@ -122,7 +122,7 @@ export default function App() {
             <div className="footer-links">
               <a
                 className="footer-link"
-                href="https://github.com/yourusername/obsignata"
+                href="https://github.com/dariortiz/obsignata"
                 target="_blank"
                 rel="noopener noreferrer"
               >
