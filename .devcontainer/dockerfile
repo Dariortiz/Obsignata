@@ -1,17 +1,19 @@
 FROM node:20-alpine
 
+# Tools needed for builds, git operations, and native addons
 RUN apk add --no-cache curl git python3 py3-pip
 
 WORKDIR /workspace
 
-# Install dependencies for all three packages
+# Pre-install dependencies so named volumes are populated on first container start.
+# docker-compose mounts these as named volumes, preserving them across rebuilds.
 COPY hardhat/package.json ./hardhat/
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 
-RUN cd hardhat && npm install
-RUN cd backend && npm install
-RUN cd frontend && npm install
+RUN cd /workspace/hardhat && npm install && \
+    cd /workspace/backend && npm install && \
+    cd /workspace/frontend && npm install
 
-# Keep container alive — VS Code attaches to it
+# Keep container alive — VS Code attaches to it via devcontainer
 CMD ["sleep", "infinity"]

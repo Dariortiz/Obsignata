@@ -1,20 +1,53 @@
 {
-  "name": "Obsignata Workspace",
+  "name": "Obsignata Development Environment",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "workspace",
   "workspaceFolder": "/workspace",
+
+  // Mount the host ~/.claude directory so Claude Code stays authenticated
+  // across container rebuilds — no re-login needed.
+  "mounts": [
+    {
+      "source": "${localEnv:USERPROFILE}/.claude",
+      "target": "/home/node/.claude",
+      "type": "bind"
+    }
+  ],
+
+  // Forward the three app ports and label them for the VS Code Ports panel
+  "forwardPorts": [3000, 3001, 8545],
+  "portsAttributes": {
+    "3000": { "label": "Frontend (Vite)" },
+    "3001": { "label": "Backend (Express API)" },
+    "8545": { "label": "Hardhat Local Blockchain Node" }
+  },
+
   "customizations": {
     "vscode": {
       "extensions": [
+        // TypeScript / JavaScript
+        "ms-vscode.vscode-typescript-next",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
+
+        // Solidity / Hardhat smart contracts
         "NomicFoundation.hardhat-solidity",
-        "ms-vscode.vscode-typescript-next"
+
+        // Claude AI coding assistant
+        "Anthropic.claude-code",
+
+        // Markdown authoring and PDF export
+        "yzhang.markdown-all-in-one",
+        "yzane.markdown-pdf",
+        "tom-latham.markdown-pdf-plus",
+        "DavidAnson.vscode-markdownlint",
+
+        // UI theme
+        "manuthebyte.dynamic-icon-theme"
       ],
       "settings": {
-        "[typescript]": {
-          "tsdk.path": "/workspace/backend/node_modules/typescript/lib"
-        },
+        // Point VS Code at the workspace TypeScript installation
+        "js/ts.tsdk.path": "/workspace/backend/node_modules/typescript/lib",
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode"
       }
