@@ -40,6 +40,7 @@ describe("Batcher", () => {
 
   beforeEach(() => {
     queue = new SubmissionQueue();
+    queue.clear();
     jest.useFakeTimers();
   });
 

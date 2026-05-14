@@ -38,6 +38,11 @@ db.exec(`
     block_number    INTEGER,
     block_timestamp INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS batcher_state (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 // -----------------------------------------------------------------------------
@@ -77,6 +82,14 @@ function rowToSubmission(row: SubmissionRow): Submission {
 // -----------------------------------------------------------------------------
 // Queries
 // -----------------------------------------------------------------------------
+
+const batcherStateQueries = {
+  get: db.prepare(`SELECT value FROM batcher_state WHERE key = ?`),
+  upsert: db.prepare(`
+    INSERT INTO batcher_state (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `),
+};
 
 export const queries = {
   insert: db.prepare(`
@@ -145,6 +158,7 @@ export const queries = {
   `),
 
   deleteAll: db.prepare(`DELETE FROM submissions`),
+  deleteAllBatcherState: db.prepare(`DELETE FROM batcher_state`),
 };
 
 // -----------------------------------------------------------------------------
@@ -215,6 +229,17 @@ export function dbRequeueFailed(ids?: string[]): void {
 
 export function dbClear(): void {
   queries.deleteAll.run();
+  queries.deleteAllBatcherState.run();
+}
+
+// Returns the Unix ms timestamp when the current batch period started, or null if never set.
+export function dbGetBatchStartedAt(): number | null {
+  const row = batcherStateQueries.get.get("batch_started_at") as { value: string } | undefined;
+  return row ? parseInt(row.value, 10) : null;
+}
+
+export function dbSetBatchStartedAt(timestampMs: number): void {
+  batcherStateQueries.upsert.run("batch_started_at", String(timestampMs));
 }
 
 export default db;

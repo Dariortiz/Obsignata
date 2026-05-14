@@ -42,15 +42,17 @@ export class TimestamperContract {
 
     const tx = await this.contract.commitBatch(merkleRoot);
 
-    // Poll for receipt directly — avoids Hardhat/ethers v6 tx.wait() log issues
+    // Poll for receipt — avoids Hardhat/ethers v6 tx.wait() log issues.
+    // 90 s timeout: Polygon Amoy's ~2 s block time means this covers ~45 blocks,
+    // which is enough headroom for a congested testnet RPC.
     let receipt = null;
-    for (let attempt = 0; attempt < 30; attempt++) {
+    for (let attempt = 0; attempt < 90; attempt++) {
       receipt = await this.provider.getTransactionReceipt(tx.hash);
       if (receipt) break;
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
-    if (!receipt) throw new Error("Transaction receipt not found after 15 seconds");
+    if (!receipt) throw new Error("Transaction receipt not found after 90 seconds");
     if (receipt.status === 0) throw new Error("Transaction reverted on-chain");
 
     // Derive batchId from batchCount — simpler than parsing logs

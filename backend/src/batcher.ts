@@ -1,5 +1,6 @@
 import { SubmissionQueue, Submission } from "./queue";
 import { buildTree, getProof } from "./merkle";
+import { dbGetBatchStartedAt, dbSetBatchStartedAt } from "./db";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -65,12 +66,33 @@ export class Batcher {
   // ---------------------------------------------------------------------------
 
   /**
-   * Starts the batcher. Sets up the time threshold timer.
+   * Starts the batcher. Resumes the time threshold from wherever it was when the
+   * process last ran — so Railway deployments don't silently reset the clock.
    */
   start(): void {
     if (this.isRunning) return;
     this.isRunning = true;
-    this.scheduleTimer();
+
+    const batchStartedAt = dbGetBatchStartedAt();
+
+    if (!batchStartedAt) {
+      // First-ever start — begin a fresh batch period.
+      this.scheduleTimer();
+      return;
+    }
+
+    const elapsed = Date.now() - batchStartedAt;
+    const remaining = this.config.timeThresholdMs - elapsed;
+
+    if (remaining <= 0) {
+      // The batch period expired while the process was down — commit on the next tick.
+      console.log(`[Batcher] Batch period overdue by ${Math.round(-remaining / 1000)}s — committing immediately`);
+      this.timer = setTimeout(() => { void this.commit("time"); }, 0);
+    } else {
+      // Resume the remaining portion of the current batch period.
+      console.log(`[Batcher] Resuming batch timer — ${Math.round(remaining / 1000)}s remaining`);
+      this.timer = setTimeout(() => { void this.commit("time"); }, remaining);
+    }
   }
 
   /**
@@ -111,6 +133,11 @@ export class Batcher {
    */
   async commit(trigger: "time" | "volume" | "manual" = "manual"): Promise<void> {
     if (this.isCommitting) return;
+
+    // Move any previously-failed submissions back to pending so they are always
+    // retried on the next commit attempt rather than silently stuck forever.
+    this.queue.requeueFailed();
+
     if (this.queue.getPendingCount() === 0) return;
 
     this.isCommitting = true;
@@ -179,9 +206,9 @@ export class Batcher {
 
   private scheduleTimer(): void {
     if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(async () => {
-      await this.commit("time");
-    }, this.config.timeThresholdMs);
+    // Record when this batch period started so restarts can resume correctly.
+    dbSetBatchStartedAt(Date.now());
+    this.timer = setTimeout(() => { void this.commit("time"); }, this.config.timeThresholdMs);
   }
 
   // ---------------------------------------------------------------------------
