@@ -1,7 +1,12 @@
 FROM node:20-alpine
 
 # Tools needed for builds, git operations, and native addons
-RUN apk add --no-cache curl git python3 py3-pip
+# bash is required so Claude Code (claude-code extension) can execute shell commands
+RUN apk add --no-cache curl git python3 py3-pip bash
+
+# Tell every process in the container where to find the shell.
+# Claude Code reads SHELL to locate a POSIX-compatible interpreter.
+ENV SHELL=/bin/bash
 
 WORKDIR /workspace
 

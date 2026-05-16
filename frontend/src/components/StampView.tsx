@@ -427,6 +427,7 @@ export function StampView() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        flexWrap: "wrap",
                         gap: 12,
                       }}
                     >

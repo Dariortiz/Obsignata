@@ -53,5 +53,13 @@
       }
     }
   },
+  // Set SHELL so Claude Code can locate a POSIX shell for Bash tool calls.
+  // This mirrors the ENV in the Dockerfile; both are needed because VS Code
+  // injects remoteEnv after the container starts, while ENV covers non-VS Code
+  // processes (e.g. direct docker exec sessions).
+  "remoteEnv": {
+    "SHELL": "/bin/bash"
+  },
+
   "remoteUser": "node"
 }
